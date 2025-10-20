@@ -1,0 +1,103 @@
+# agentenv configuration file
+# Place this file in your project root as .agentenv.yml
+
+# Docker Compose settings
+docker:
+  compose_file: docker-compose.yml
+  services:
+    # PostgreSQL database service
+    postgres:
+      ports:
+        - container: 5432
+          host_base: 5432        # Agent 1 will use 5433, Agent 2 will use 5434, etc.
+      volumes:
+        - postgres_data          # Will be renamed to postgres_data_agent1, etc.
+      environment:
+        POSTGRES_DB: "myproject_agent{id}"  # {id} replaced with agent number
+
+    # Backend service
+    backend:
+      ports:
+        - container: 8000
+          host_base: 8000        # Agent 1 will use 8001, Agent 2 will use 8002, etc.
+      depends_on:
+        - postgres
+
+    # Frontend service
+    frontend:
+      ports:
+        - container: 5173
+          host_base: 5173        # Agent 1 will use 5174, Agent 2 will use 5175, etc.
+
+    # Playwright service (optional - for PDF rendering)
+    playwright:
+      ports:
+        - container: 3000
+          host_base: 3000        # Agent 1 will use 3001, Agent 2 will use 3002, etc.
+
+# Environment files to copy and patch
+env_files:
+  - path: backend/.env
+    patches:
+      # Patch database URL with agent-specific port and database name
+      - pattern: 'postgresql://([^:]+):([^@]+)@([^:]+):(\d+)/(\w+)'
+        replace: 'postgresql://\1:\2@\3:{postgres.port}/\5_agent{id}'
+
+      # Patch Playwright URL with agent-specific port
+      - pattern: 'ws://localhost:3000'
+        replace: 'ws://localhost:{playwright.port}'
+
+      # Patch storage paths
+      - pattern: 'LOCAL_STORAGE_PATH=(.+)'
+        replace: 'LOCAL_STORAGE_PATH={worktree_path}/backend/storage'
+
+      # Patch backend URL
+      - pattern: 'LOCAL_STORAGE_BASE_URL=http://localhost:8000'
+        replace: 'LOCAL_STORAGE_BASE_URL=http://localhost:{backend.port}'
+
+      # Patch CORS origins
+      - pattern: 'BACKEND_CORS_ORIGINS=\[.*\]'
+        replace: 'BACKEND_CORS_ORIGINS=["http://localhost:{frontend.port}"]'
+
+  - path: frontend/.env
+    patches:
+      # Patch API base URL
+      - pattern: 'VITE_API_BASE_URL=http://localhost:8000'
+        replace: 'VITE_API_BASE_URL=http://localhost:{backend.port}'
+
+# Database initialization
+database:
+  service: postgres
+  type: postgresql
+  main_url: postgresql://user:password@localhost:5432/myproject
+  migrations:
+    command: dbmate up
+    working_dir: .
+
+# Custom setup commands (optional)
+setup_commands:
+  - name: "Run migrations"
+    command: "dbmate up"
+    working_dir: "."
+    when: after_services_start
+
+  - name: "Install backend dependencies"
+    command: "pip install -r requirements.txt"
+    working_dir: "backend"
+    when: after_services_start
+
+  - name: "Install frontend dependencies"
+    command: "npm install"
+    working_dir: "frontend"
+    when: after_services_start
+
+# Agent launch configuration
+agent_launch:
+  terminal: alacritty                      # Terminal to launch (alacritty, gnome-terminal, konsole, tmux, xterm)
+  working_directory: "{worktree_path}"     # Starting directory for the agent
+
+# Cleanup configuration
+cleanup:
+  archive_database: true                   # Archive database before cleanup
+  archive_location: .agentenv/archives         # Where to store database archives
+  remove_volumes: true                     # Remove Docker volumes on cleanup
