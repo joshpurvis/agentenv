@@ -200,7 +200,8 @@ func runUp(cmd *cobra.Command, args []string) error {
 	// 16. Launch agent in terminal (if configured)
 	if cfg.AgentLaunch.Terminal != "" || cfg.AgentLaunch.WorkingDirectory != "" {
 		fmt.Println("\n🚀 Launching agent in terminal...")
-		if err := terminal.LaunchInTerminal(agentCommand, worktreePath); err != nil {
+		windowTitle := fmt.Sprintf("agentenv: %s", agentName)
+		if err := terminal.LaunchInTerminal(agentCommand, worktreePath, windowTitle); err != nil {
 			// Terminal launch is not critical - just warn
 			if verbose {
 				fmt.Printf("  ⚠️  Could not auto-launch terminal: %v\n", err)

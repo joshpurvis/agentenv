@@ -71,7 +71,7 @@ func DetectTerminal() *Terminal {
 
 // LaunchInTerminal opens a new terminal window and executes the given command
 // Returns an error if the terminal could not be launched
-func LaunchInTerminal(command string, workDir string) error {
+func LaunchInTerminal(command string, workDir string, title string) error {
 	terminal := DetectTerminal()
 
 	if !terminal.Available {
@@ -82,25 +82,25 @@ func LaunchInTerminal(command string, workDir string) error {
 
 	switch terminal.Name {
 	case "alacritty":
-		// alacritty --working-directory <path> -e <command>
-		cmd = exec.Command("alacritty", "--working-directory", workDir, "-e", "sh", "-c", command)
+		// alacritty --title <title> --working-directory <path> -e <command>
+		cmd = exec.Command("alacritty", "--title", title, "--working-directory", workDir, "-e", "sh", "-c", command)
 
 	case "gnome-terminal":
-		// gnome-terminal --working-directory=<path> -- <command>
-		cmd = exec.Command("gnome-terminal", fmt.Sprintf("--working-directory=%s", workDir), "--", "sh", "-c", command)
+		// gnome-terminal --title=<title> --working-directory=<path> -- <command>
+		cmd = exec.Command("gnome-terminal", "--title", title, fmt.Sprintf("--working-directory=%s", workDir), "--", "sh", "-c", command)
 
 	case "tmux":
-		// tmux new-window -c <path> <command>
-		cmd = exec.Command("tmux", "new-window", "-c", workDir, "sh", "-c", command)
+		// tmux new-window -n <title> -c <path> <command>
+		cmd = exec.Command("tmux", "new-window", "-n", title, "-c", workDir, "sh", "-c", command)
 
 	case "konsole":
-		// konsole --workdir <path> -e <command>
-		cmd = exec.Command("konsole", "--workdir", workDir, "-e", "sh", "-c", command)
+		// konsole --title <title> --workdir <path> -e <command>
+		cmd = exec.Command("konsole", "--title", title, "--workdir", workDir, "-e", "sh", "-c", command)
 
 	case "xterm":
-		// xterm -e "cd <path> && <command>"
+		// xterm -title <title> -e "cd <path> && <command>"
 		fullCommand := fmt.Sprintf("cd %s && %s", workDir, command)
-		cmd = exec.Command("xterm", "-e", "sh", "-c", fullCommand)
+		cmd = exec.Command("xterm", "-title", title, "-e", "sh", "-c", fullCommand)
 
 	default:
 		return printManualInstructions(command, workDir)
