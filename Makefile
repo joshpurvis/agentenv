@@ -15,13 +15,14 @@ INSTALL_PATH=/usr/local/bin
 ## build: Build the binary
 build:
 	@echo "Building $(BINARY_NAME)..."
-	go build $(LDFLAGS) -o $(BINARY_NAME) .
-	@echo "Built $(BINARY_NAME) (version: $(VERSION))"
+	@mkdir -p bin
+	go build $(LDFLAGS) -o bin/$(BINARY_NAME) .
+	@echo "Built bin/$(BINARY_NAME) (version: $(VERSION))"
 
 ## install: Install the binary to $(INSTALL_PATH)
 install: build
 	@echo "Installing $(BINARY_NAME) to $(INSTALL_PATH)..."
-	@sudo cp $(BINARY_NAME) $(INSTALL_PATH)/
+	@sudo cp bin/$(BINARY_NAME) $(INSTALL_PATH)/
 	@echo "Installed successfully!"
 	@echo "Run '$(BINARY_NAME) --help' to get started"
 
@@ -34,7 +35,7 @@ uninstall:
 ## clean: Remove build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
-	@rm -f $(BINARY_NAME)
+	@rm -rf bin
 	@go clean
 	@echo "Clean complete!"
 

@@ -122,25 +122,14 @@ func runUp(cmd *cobra.Command, args []string) error {
 		fmt.Printf("✓ Override file created: %s\n", overridePath)
 	}
 
-	// 9. Patch base docker-compose.yml to remove port definitions
-	if verbose {
-		fmt.Println("🔧 Patching base docker-compose.yml...")
-	}
-	if err := docker.PatchBaseCompose(cfg, worktreePath); err != nil {
-		return fmt.Errorf("failed to patch base compose file: %w", err)
-	}
-	if verbose {
-		fmt.Println("✓ Base compose file patched")
-	}
-
-	// 10. Patch environment files
+	// 9. Patch environment files
 	fmt.Println("\n⚙️  Patching environment files...")
 	if err := envpatch.PatchEnvFiles(cfg, worktreePath, ports, portSlot); err != nil {
 		return fmt.Errorf("failed to patch env files: %w", err)
 	}
 	fmt.Println("✓ Environment files patched")
 
-	// 11. Run setup commands (before services start)
+	// 10. Run setup commands (before services start)
 	if len(cfg.SetupCommands) > 0 {
 		hasBeforeCommands := false
 		for _, setupCmd := range cfg.SetupCommands {
@@ -160,19 +149,19 @@ func runUp(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// 12. Start Docker services
+	// 11. Start Docker services
 	fmt.Println("\n🐳 Starting Docker services...")
 	if err := startDockerServices(cfg, worktreePath, agent.DockerComposeOverride, verbose); err != nil {
 		return fmt.Errorf("failed to start Docker services: %w", err)
 	}
 	fmt.Println("✓ Docker services started")
 
-	// 13. Wait for services to be healthy
+	// 12. Wait for services to be healthy
 	fmt.Println("\n⏳ Waiting for services to be ready...")
 	time.Sleep(5 * time.Second) // Simple wait for now
 	fmt.Println("✓ Services ready")
 
-	// 14. Run setup commands (after services start)
+	// 13. Run setup commands (after services start)
 	if len(cfg.SetupCommands) > 0 {
 		hasAfterCommands := false
 		for _, setupCmd := range cfg.SetupCommands {
@@ -192,12 +181,12 @@ func runUp(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// 15. Save registry
+	// 14. Save registry
 	if err := reg.Save(); err != nil {
 		return fmt.Errorf("failed to save registry: %w", err)
 	}
 
-	// 16. Launch agent in terminal (if configured)
+	// 15. Launch agent in terminal (if configured)
 	if cfg.AgentLaunch.Terminal != "" || cfg.AgentLaunch.WorkingDirectory != "" {
 		fmt.Println("\n🚀 Launching agent in terminal...")
 		windowTitle := fmt.Sprintf("agentenv: %s", agentName)
@@ -209,7 +198,7 @@ func runUp(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// 17. Print summary
+	// 16. Print summary
 	separator := strings.Repeat("═", 60)
 	fmt.Println("\n" + separator)
 	fmt.Printf("🎉 Agent %s is ready!\n\n", agentID)

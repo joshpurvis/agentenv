@@ -39,8 +39,8 @@ func GenerateOverride(cfg *config.Config, agent *registry.Agent, agentID int, pr
 	for serviceName, serviceCfg := range cfg.Docker.Services {
 		serviceOverride := ServiceOverride{}
 
-		// Set container name with agent suffix
-		serviceOverride.ContainerName = fmt.Sprintf("%s_%s_agent%d", projectName, serviceName, agentID)
+		// Set container name with agent ID in the middle for better tab completion
+		serviceOverride.ContainerName = fmt.Sprintf("%s-agent%d-%s", projectName, agentID, serviceName)
 
 		// Map ports: "hostPort:containerPort"
 		if len(serviceCfg.Ports) > 0 {
@@ -161,49 +161,4 @@ func StartServices(worktreePath, overridePath string) error {
 func StopServices(worktreePath, overridePath string) error {
 	// This would execute: docker-compose -f docker-compose.yml -f override.yml down
 	return fmt.Errorf("not implemented - use exec.Command to run docker-compose")
-}
-
-// PatchBaseCompose removes port definitions from the base docker-compose.yml
-// This prevents Docker Compose from merging ports (which causes conflicts)
-func PatchBaseCompose(cfg *config.Config, worktreePath string) error {
-	composeFile := filepath.Join(worktreePath, cfg.Docker.ComposeFile)
-
-	// Read the base compose file
-	data, err := os.ReadFile(composeFile)
-	if err != nil {
-		return fmt.Errorf("failed to read base compose file: %w", err)
-	}
-
-	// Parse YAML
-	var compose map[string]interface{}
-	if err := yaml.Unmarshal(data, &compose); err != nil {
-		return fmt.Errorf("failed to parse compose file: %w", err)
-	}
-
-	// Get services section
-	services, ok := compose["services"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("no services section found in compose file")
-	}
-
-	// Remove ports from each service defined in our config
-	for serviceName := range cfg.Docker.Services {
-		if service, ok := services[serviceName].(map[string]interface{}); ok {
-			// Remove the ports key to avoid merge conflicts
-			delete(service, "ports")
-		}
-	}
-
-	// Marshal back to YAML
-	patchedData, err := yaml.Marshal(&compose)
-	if err != nil {
-		return fmt.Errorf("failed to marshal patched compose file: %w", err)
-	}
-
-	// Write back to file
-	if err := os.WriteFile(composeFile, patchedData, 0644); err != nil {
-		return fmt.Errorf("failed to write patched compose file: %w", err)
-	}
-
-	return nil
 }

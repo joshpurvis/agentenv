@@ -80,26 +80,29 @@ func LaunchInTerminal(command string, workDir string, title string) error {
 
 	var cmd *exec.Cmd
 
+	// Wrap command to exec into a shell after it exits, so terminal stays open
+	wrappedCommand := fmt.Sprintf("%s; exec ${SHELL:-bash}", command)
+
 	switch terminal.Name {
 	case "alacritty":
 		// alacritty --title <title> --working-directory <path> -e <command>
-		cmd = exec.Command("alacritty", "--title", title, "--working-directory", workDir, "-e", "sh", "-c", command)
+		cmd = exec.Command("alacritty", "--title", title, "--working-directory", workDir, "-e", "sh", "-c", wrappedCommand)
 
 	case "gnome-terminal":
 		// gnome-terminal --title=<title> --working-directory=<path> -- <command>
-		cmd = exec.Command("gnome-terminal", "--title", title, fmt.Sprintf("--working-directory=%s", workDir), "--", "sh", "-c", command)
+		cmd = exec.Command("gnome-terminal", "--title", title, fmt.Sprintf("--working-directory=%s", workDir), "--", "sh", "-c", wrappedCommand)
 
 	case "tmux":
 		// tmux new-window -n <title> -c <path> <command>
-		cmd = exec.Command("tmux", "new-window", "-n", title, "-c", workDir, "sh", "-c", command)
+		cmd = exec.Command("tmux", "new-window", "-n", title, "-c", workDir, "sh", "-c", wrappedCommand)
 
 	case "konsole":
 		// konsole --title <title> --workdir <path> -e <command>
-		cmd = exec.Command("konsole", "--title", title, "--workdir", workDir, "-e", "sh", "-c", command)
+		cmd = exec.Command("konsole", "--title", title, "--workdir", workDir, "-e", "sh", "-c", wrappedCommand)
 
 	case "xterm":
 		// xterm -title <title> -e "cd <path> && <command>"
-		fullCommand := fmt.Sprintf("cd %s && %s", workDir, command)
+		fullCommand := fmt.Sprintf("cd %s && %s; exec ${SHELL:-bash}", workDir, command)
 		cmd = exec.Command("xterm", "-title", title, "-e", "sh", "-c", fullCommand)
 
 	default:

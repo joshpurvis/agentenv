@@ -44,13 +44,12 @@ The `agentenv up` command follows this sequence:
 4. Allocate ports for all services (basePort + slot)
 5. Create git worktree (internal/git)
 6. Generate docker-compose override file (internal/docker)
-7. Patch base docker-compose.yml to remove port definitions
-8. Patch environment files with agent-specific values (internal/envpatch)
-9. Run pre-start setup commands
-10. Start Docker services
-11. Run post-start setup commands
-12. Save registry
-13. Launch agent in terminal (internal/terminal)
+7. Patch environment files with agent-specific values (internal/envpatch)
+8. Run pre-start setup commands
+9. Start Docker services
+10. Run post-start setup commands
+11. Save registry
+12. Launch agent in terminal (internal/terminal)
 
 ### Port Allocation
 
@@ -75,7 +74,7 @@ The override file provides:
 - Renamed volumes: `{volumeName}_agent{slot}`
 - Templated environment variables: `{id}`, `{service.port}`, `{worktree_path}`
 
-**Important**: Base docker-compose.yml is patched to remove port definitions to avoid merge conflicts.
+**Important**: Base docker-compose.yml should NOT define port mappings. Ports are only defined in override files to prevent conflicts. For local development, create a `docker-compose.override.yml` (add to .gitignore).
 
 ### Environment Patching (internal/envpatch)
 
