@@ -75,7 +75,7 @@ func PatchAllEnvFiles(mainRepoPath string, agent *registry.Agent, agentID int, e
 }
 
 // replaceTemplateVars replaces template variables in strings
-// Supports: {serviceName.port}, {id}, {worktree_path}
+// Supports: {serviceName.port}, {id}, {name}, {worktree_path}
 func replaceTemplateVars(value string, agent *registry.Agent, agentID int) string {
 	result := value
 
@@ -85,8 +85,11 @@ func replaceTemplateVars(value string, agent *registry.Agent, agentID int) strin
 		result = strings.ReplaceAll(result, placeholder, fmt.Sprintf("%d", port))
 	}
 
-	// Replace {id}
+	// Replace {id} with port slot number (for backward compatibility)
 	result = strings.ReplaceAll(result, "{id}", fmt.Sprintf("%d", agentID))
+
+	// Replace {name} with agent name (new feature)
+	result = strings.ReplaceAll(result, "{name}", agent.Name)
 
 	// Replace {worktree_path}
 	result = strings.ReplaceAll(result, "{worktree_path}", agent.WorktreePath)

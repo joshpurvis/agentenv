@@ -11,7 +11,7 @@ import (
 )
 
 // PatchEnvFiles patches all environment files according to the configuration
-func PatchEnvFiles(cfg *config.Config, worktreePath string, ports map[string]int, agentID int) error {
+func PatchEnvFiles(cfg *config.Config, worktreePath string, ports map[string]int, agentID int, agentName string) error {
 	// Get current directory (main repo root)
 	mainRepoPath, err := os.Getwd()
 	if err != nil {
@@ -59,7 +59,7 @@ func PatchEnvFiles(cfg *config.Config, worktreePath string, ports map[string]int
 			replacement := patch.Replace
 
 			// Replace template variables in the replacement string
-			replacement = replacePlaceholders(replacement, ports, agentID, worktreePath)
+			replacement = replacePlaceholders(replacement, ports, agentID, agentName, worktreePath)
 
 			// Apply regex replacement
 			re, err := regexp.Compile(pattern)
@@ -80,15 +80,18 @@ func PatchEnvFiles(cfg *config.Config, worktreePath string, ports map[string]int
 }
 
 // replacePlaceholders replaces template variables in a string
-func replacePlaceholders(str string, ports map[string]int, agentID int, worktreePath string) string {
+func replacePlaceholders(str string, ports map[string]int, agentID int, agentName string, worktreePath string) string {
 	// Replace {service.port} placeholders
 	for serviceName, port := range ports {
 		placeholder := fmt.Sprintf("{%s.port}", serviceName)
 		str = strings.ReplaceAll(str, placeholder, fmt.Sprintf("%d", port))
 	}
 
-	// Replace {id} placeholder
+	// Replace {id} placeholder (port slot number for backward compatibility)
 	str = strings.ReplaceAll(str, "{id}", fmt.Sprintf("%d", agentID))
+
+	// Replace {name} placeholder (agent name)
+	str = strings.ReplaceAll(str, "{name}", agentName)
 
 	// Replace {worktree_path} placeholder
 	str = strings.ReplaceAll(str, "{worktree_path}", worktreePath)

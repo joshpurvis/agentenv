@@ -27,9 +27,9 @@ type ServiceOverride struct {
 }
 
 // GenerateOverride creates a docker-compose override file for an agent
-// It takes the config, agent details, agent ID, and project name
+// It takes the config, agent details, and project name
 // Returns the path to the generated override file and any error
-func GenerateOverride(cfg *config.Config, agent *registry.Agent, agentID int, projectName string) (string, error) {
+func GenerateOverride(cfg *config.Config, agent *registry.Agent, projectName string) (string, error) {
 	override := ComposeOverride{
 		Services: make(map[string]ServiceOverride),
 		Volumes:  make(map[string]interface{}),
@@ -39,8 +39,8 @@ func GenerateOverride(cfg *config.Config, agent *registry.Agent, agentID int, pr
 	for serviceName, serviceCfg := range cfg.Docker.Services {
 		serviceOverride := ServiceOverride{}
 
-		// Set container name with agent ID in the middle for better tab completion
-		serviceOverride.ContainerName = fmt.Sprintf("%s-agent%d-%s", projectName, agentID, serviceName)
+		// Set container name with agent name for semantic identification
+		serviceOverride.ContainerName = fmt.Sprintf("%s-%s-%s", projectName, agent.Name, serviceName)
 
 		// Map ports: "hostPort:containerPort"
 		if len(serviceCfg.Ports) > 0 {
@@ -59,7 +59,7 @@ func GenerateOverride(cfg *config.Config, agent *registry.Agent, agentID int, pr
 			for _, volumeName := range serviceCfg.Volumes {
 				// Check if this is a named volume (not a bind mount)
 				if !strings.Contains(volumeName, "/") && !strings.HasPrefix(volumeName, ".") {
-					newVolumeName := fmt.Sprintf("%s_agent%d", volumeName, agentID)
+					newVolumeName := fmt.Sprintf("%s_%s", volumeName, agent.Name)
 
 					// Add to volumes section
 					override.Volumes[newVolumeName] = nil
@@ -81,7 +81,7 @@ func GenerateOverride(cfg *config.Config, agent *registry.Agent, agentID int, pr
 			serviceOverride.Environment = make(map[string]string)
 			for key, value := range serviceCfg.Environment {
 				// Replace template variables
-				replaced := replaceTemplateVars(value, agent, agentID)
+				replaced := replaceTemplateVars(value, agent)
 				serviceOverride.Environment[key] = replaced
 			}
 		}
@@ -131,8 +131,8 @@ func getVolumeMountPath(volumeName string) string {
 }
 
 // replaceTemplateVars replaces template variables in strings
-// Supports: {postgres.port}, {backend.port}, {frontend.port}, {id}, {worktree_path}
-func replaceTemplateVars(value string, agent *registry.Agent, agentID int) string {
+// Supports: {serviceName.port}, {id}, {name}, {worktree_path}
+func replaceTemplateVars(value string, agent *registry.Agent) string {
 	result := value
 
 	// Replace port variables: {serviceName.port}
@@ -141,8 +141,11 @@ func replaceTemplateVars(value string, agent *registry.Agent, agentID int) strin
 		result = strings.ReplaceAll(result, placeholder, fmt.Sprintf("%d", port))
 	}
 
-	// Replace {id}
-	result = strings.ReplaceAll(result, "{id}", fmt.Sprintf("%d", agentID))
+	// Replace {id} with port slot number (for backward compatibility)
+	result = strings.ReplaceAll(result, "{id}", fmt.Sprintf("%d", agent.PortSlot))
+
+	// Replace {name} with agent name (new feature)
+	result = strings.ReplaceAll(result, "{name}", agent.Name)
 
 	// Replace {worktree_path}
 	result = strings.ReplaceAll(result, "{worktree_path}", agent.WorktreePath)

@@ -69,18 +69,35 @@ Located at `.agentenv/registry.json`:
 ### Docker Override Generation (internal/docker/compose.go)
 
 The override file provides:
-- Unique container names: `{project}_{service}_agent{slot}`
+- Unique container names: `{project}-{agentName}-{service}` (e.g., `myapp-claude-api-postgres`)
 - Port mappings: `{allocatedPort}:{containerPort}`
-- Renamed volumes: `{volumeName}_agent{slot}`
-- Templated environment variables: `{id}`, `{service.port}`, `{worktree_path}`
+- Renamed volumes: `{volumeName}_{agentName}` (e.g., `postgres_data_claude-api`)
+- Templated environment variables: `{id}`, `{name}`, `{service.port}`, `{worktree_path}`
 
 **Important**: Base docker-compose.yml should NOT define port mappings. Ports are only defined in override files to prevent conflicts. For local development, create a `docker-compose.override.yml` (add to .gitignore).
 
 ### Environment Patching (internal/envpatch)
 
-Uses regex patterns from config to replace values in env files:
-- Supports templates: `{postgres.port}`, `{backend.port}`, `{id}`, `{worktree_path}`
-- Example: `postgresql://user:pass@localhost:5432/db` → `postgresql://user:pass@localhost:5433/db_agent1`
+Uses regex patterns from config to replace values in env files.
+
+**Template Variables:**
+- `{service.port}`: Allocated port for a service (e.g., `{postgres.port}` → `5433`)
+- `{id}`: Port slot number (e.g., `1`, `2`, `3`) - use for database names to avoid conflicts
+- `{name}`: Agent name (e.g., `claude-api`) - use for display/logging
+- `{worktree_path}`: Full path to the agent's worktree
+
+**Example:**
+```
+DATABASE_URL=postgresql://user:pass@localhost:5432/mydb
+```
+becomes:
+```
+DATABASE_URL=postgresql://user:pass@localhost:{postgres.port}/mydb_{id}
+```
+evaluates to:
+```
+DATABASE_URL=postgresql://user:pass@localhost:5433/mydb_1
+```
 
 ### Git Worktrees (internal/git/worktree.go)
 
@@ -142,9 +159,11 @@ The tool expects a `.agentenv.yml` in the project root. Key sections:
 
 ## Notes for Development
 
-- Agent IDs are now just the agent name (e.g., "claude1"), not generated IDs
+- Agent IDs are now just the agent name (e.g., "claude-api"), not generated IDs
 - The `NextID` field in registry is deprecated but kept for backward compatibility
 - Port slots are gap-filled - removing agent1 frees slot 1 for the next agent
+- **Docker resources use agent names**: Containers and volumes are named with the agent name (e.g., `myapp-claude-api-postgres`), not port slot numbers. This ensures consistency across all visible resources.
+- **Template variables**: Use `{id}` for numeric port slots (database names), `{name}` for agent names (display/logging)
 - Base docker-compose.yml is modified in worktrees (ports removed) to avoid conflicts
 - Environment patching happens before Docker services start
 - Setup commands can run before or after services start (controlled by `when` field)

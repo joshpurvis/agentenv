@@ -114,7 +114,7 @@ func runUp(cmd *cobra.Command, args []string) error {
 	if verbose {
 		fmt.Println("\n🐳 Generating docker-compose override...")
 	}
-	overridePath, err := docker.GenerateOverride(cfg, agent, portSlot, projectName)
+	overridePath, err := docker.GenerateOverride(cfg, agent, projectName)
 	if err != nil {
 		return fmt.Errorf("failed to generate override: %w", err)
 	}
@@ -124,7 +124,7 @@ func runUp(cmd *cobra.Command, args []string) error {
 
 	// 9. Patch environment files
 	fmt.Println("\n⚙️  Patching environment files...")
-	if err := envpatch.PatchEnvFiles(cfg, worktreePath, ports, portSlot); err != nil {
+	if err := envpatch.PatchEnvFiles(cfg, worktreePath, ports, portSlot, agentName); err != nil {
 		return fmt.Errorf("failed to patch env files: %w", err)
 	}
 	fmt.Println("✓ Environment files patched")
